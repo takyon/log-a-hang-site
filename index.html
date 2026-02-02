@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hang Club</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__text">
+        <p class="eyebrow">Family Challenge</p>
+        <h1>Hang Club</h1>
+        <p class="subtitle">
+          A fun, friendly dead-hang tracker for your daily strength streaks.
+        </p>
+      </div>
+      <div class="hero__card">
+        <div class="hero__ring"></div>
+        <div class="hero__metrics">
+          <div>
+            <span class="metric__label">Total Hangs Logged</span>
+            <span id="metric-total" class="metric__value">0</span>
+          </div>
+          <div>
+            <span class="metric__label">Longest Hang</span>
+            <span id="metric-longest" class="metric__value">0s</span>
+          </div>
+        </div>
+        <div class="team-progress">
+          <div class="team-progress__head">
+            <span>Team Power</span>
+            <span id="team-progress-label">0 / 0s</span>
+          </div>
+          <div class="team-progress__bar">
+            <div id="team-progress" class="team-progress__fill"></div>
+          </div>
+        </div>
+        <p class="hero__tip">Tip: Aim for a tiny improvement each week.</p>
+      </div>
+    </header>
+
+    <section id="reminder" class="reminder" aria-live="polite">
+      <div>
+        <h2>Hang Reminder</h2>
+        <p id="reminder-text">No hangs logged today yet.</p>
+      </div>
+      <button id="reminder-log" class="primary">Log Now</button>
+    </section>
+
+    <main>
+      <section class="panel" aria-labelledby="log-title">
+        <div class="panel__header">
+          <h2 id="log-title">Log A Hang</h2>
+          <button id="reset-demo" class="ghost">Reset Demo Data</button>
+        </div>
+        <form id="log-form" class="log-form">
+          <label>
+            Who hung today?
+            <select id="user-select" required></select>
+          </label>
+          <label>
+            Seconds
+            <input id="seconds" type="number" min="1" max="999" step="1" placeholder="e.g. 45" required />
+          </label>
+          <label>
+            Date
+            <input id="hang-date" type="date" required />
+          </label>
+          <label>
+            Note (optional)
+            <input id="note" type="text" maxlength="60" placeholder="How did it feel?" />
+          </label>
+          <button type="submit" class="primary">Save Hang</button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="team-title">
+        <div class="panel__header">
+          <h2 id="team-title">Team Board</h2>
+          <button id="add-user" class="ghost">Add Member</button>
+        </div>
+        <div id="team-board" class="team-board"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="quest-title">
+        <div class="panel__header">
+          <h2 id="quest-title">Weekly Quest</h2>
+          <button id="new-quest" class="ghost">New Quest</button>
+        </div>
+        <div id="quest-card" class="quest">
+          <div>
+            <p id="quest-name" class="quest__name">Quest</p>
+            <p id="quest-desc" class="quest__desc">Keep hanging!</p>
+          </div>
+          <div class="quest__progress">
+            <div class="quest__bar">
+              <div id="quest-progress" class="quest__fill"></div>
+            </div>
+            <span id="quest-label" class="quest__label">0 / 0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="badge-title">
+        <div class="panel__header">
+          <h2 id="badge-title">Badges</h2>
+          <button id="toggle-badges" class="ghost">Show All</button>
+        </div>
+        <div id="badge-grid" class="badge-grid"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="sync">
+        <h3>Family Sync</h3>
+        <p>
+          Use a shared family code to keep everyone on one leaderboard.
+        </p>
+        <div class="sync__row">
+          <input id="family-code" type="text" placeholder="Family code" />
+          <button id="connect-sync" class="primary">Connect</button>
+          <button id="new-code" class="ghost">New Code</button>
+        </div>
+        <div class="sync__row sync__row--actions">
+          <button id="copy-code" class="ghost">Copy Code</button>
+          <button id="copy-link" class="ghost">Copy Link</button>
+          <button id="clear-data" class="ghost danger">Clear All Data</button>
+        </div>
+        <div class="sync__row sync__row--actions">
+          <button id="toggle-sound" class="ghost">Sound: On</button>
+        </div>
+        <p id="sync-status" class="sync__status">Not connected</p>
+      </div>
+      <div class="footer__storage">
+        <p>
+          Data is stored in this browser only. Use “Export” to share between households.
+        </p>
+        <div class="footer__actions">
+          <button id="export-data" class="ghost">Export</button>
+          <label class="ghost file-label">
+            Import
+            <input id="import-data" type="file" accept="application/json" />
+          </label>
+        </div>
+      </div>
+    </footer>
+
+    <div id="avatar-modal" class="modal" aria-hidden="true">
+      <div class="modal__card">
+        <div class="modal__header">
+          <h3>Pick An Avatar</h3>
+          <button id="avatar-close" class="ghost">Close</button>
+        </div>
+        <div id="avatar-grid" class="avatar-grid"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <template id="member-template">
+      <article class="member-card">
+        <header>
+          <div class="member__title">
+            <div class="avatar"></div>
+            <div>
+              <h3 class="member__name"></h3>
+              <p class="member__meta"></p>
+            </div>
+          </div>
+          <button class="ghost member__edit">Edit</button>
+        </header>
+        <div class="member__stats">
+          <div>
+            <span class="stat__label">Today</span>
+            <span class="stat__value today">0s</span>
+          </div>
+          <div>
+            <span class="stat__label">Best</span>
+            <span class="stat__value best">0s</span>
+          </div>
+          <div>
+            <span class="stat__label">Streak</span>
+            <span class="stat__value streak">0 days</span>
+          </div>
+          <div>
+            <span class="stat__label">Longest</span>
+            <span class="stat__value longest">0 days</span>
+          </div>
+        </div>
+        <div class="member__history"></div>
+      </article>
+    </template>
+
+    <template id="badge-template">
+      <div class="badge">
+        <div class="badge__icon"></div>
+        <div>
+          <p class="badge__title"></p>
+          <p class="badge__desc"></p>
+        </div>
+        <span class="badge__stamp">Earned</span>
+      </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
