@@ -586,3 +586,16 @@ button:active {
   padding: 10px 0;
   font-size: 1.4rem;
 }
+
+
+.hero__art {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hang-graphic {
+  width: min(320px, 90%);
+  height: auto;
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.12));
+}
