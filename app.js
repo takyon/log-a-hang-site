@@ -364,7 +364,7 @@ function bindEvents() {
     Object.assign(state, defaultData());
     seedDemoData();
     saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
     render();
     toastMsg("Demo data reset.");
   });
@@ -379,12 +379,12 @@ function bindEvents() {
       avatar: "😊",
     };
     ensureDefaultUsers();
-  normalizeUsers();
+    normalizeUsers();
     state.users.push(newUser);
     ensureDefaultUsers();
-  normalizeUsers();
+    normalizeUsers();
     saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
     render();
     openAvatarPicker(newUser.id);
   });
@@ -400,7 +400,7 @@ function bindEvents() {
       state.weeklyQuest = null;
       ensureWeeklyQuest(true);
       saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
       render();
     });
   }
@@ -455,8 +455,6 @@ function bindEvents() {
     connectSync(code);
     lockFamilyCode();
     updateFamilyUiState();
-    lockFamilyCode();
-    updateFamilyUiState();
   });
 }
 
@@ -486,7 +484,7 @@ function handleSubmit(event) {
   }
   updateWeeklyProgress();
   saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
   render();
   secondsInput.value = "";
   noteInput.value = "";
@@ -742,7 +740,7 @@ function editMember(userId) {
   }
   openAvatarPicker(user.id);
   saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
   render();
 }
 
@@ -761,10 +759,12 @@ function initSync() {
   familyCodeInput.value = familyCode;
   initSupabase();
   if (familyCode) {
+    lockFamilyCode();
     connectSync(familyCode);
   } else {
     setSyncStatus("Not connected");
   }
+  updateFamilyUiState();
 }
 
 function initSupabase() {
@@ -826,7 +826,7 @@ async function syncWithRemote() {
     const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
     ensureDefaultUsers();
-  normalizeUsers();
+    normalizeUsers();
     saveState({ sync: false, mark: false });
     render();
     setSyncStatus(`Synced from family ${familyCode}.`);
@@ -834,8 +834,8 @@ async function syncWithRemote() {
     debugLog("syncWithRemote: pushLocal", { remoteUpdated, localUpdated });
     await pushState();
   } else {
-    debugLog("pushState: success", { familyCode });
-  setSyncStatus(`Connected to family ${familyCode}.`);
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
+    setSyncStatus(`Connected to family ${familyCode}.`);
   }
 }
 
@@ -888,7 +888,7 @@ function subscribeRealtime() {
         const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
     ensureDefaultUsers();
-  normalizeUsers();
+    normalizeUsers();
         saveState({ sync: false, mark: false });
         render();
         toastMsg("Synced new hang from family.");
@@ -978,7 +978,7 @@ function importData(event) {
       if (!parsed.users || !parsed.logs) throw new Error("Invalid file");
       Object.assign(state, parsed);
       saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
       render();
       toastMsg("Data imported.");
     } catch (error) {
@@ -1020,11 +1020,15 @@ function renderQuest() {
   ensureWeeklyQuest();
   const quest = state.weeklyQuest;
   if (!quest) return;
+  const progress = getWeekSeconds();
+  if (quest.progress !== progress) {
+    quest.progress = progress;
+  }
   questName.textContent = quest.title;
   questDesc.textContent = quest.desc;
-  const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+  const percent = Math.min(100, Math.round((progress / quest.target) * 100));
   questProgress.style.width = `${percent}%`;
-  questLabel.textContent = `${quest.progress} / ${quest.target}`;
+  questLabel.textContent = `${progress} / ${quest.target}`;
 }
 
 function renderTeamProgress() {
@@ -1062,6 +1066,7 @@ function updateWeeklyProgress() {
   const total = getWeekSeconds();
   if (!state.weeklyQuest) return;
   state.weeklyQuest.progress = total;
+  debugLog("weeklyProgress", { total, target: state.weeklyQuest.target, weekKey: state.weeklyQuest.weekKey });
   if (!state.weeklyQuest.completed && total >= state.weeklyQuest.target) {
     state.weeklyQuest.completed = true;
     toastMsg("Weekly quest completed! Awesome team work!");
@@ -1081,13 +1086,28 @@ function getWeekSeconds() {
   return total;
 }
 
-function getWeekKey(dateInput) {
-  const date = dateInput ? new Date(`${dateInput}T00:00:00`) : new Date();
-  const day = date.getDay();
-  const diff = (day + 6) % 7;
-  date.setDate(date.getDate() - diff);
-  return date.toISOString().slice(0, 10);
+function toUtcDateKey(date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
+
+function getWeekKey(dateInput) {
+  let date;
+  if (dateInput) {
+    const parts = dateInput.split("-").map(Number);
+    date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  } else {
+    const now = new Date();
+    date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  }
+  const day = date.getUTCDay();
+  const diff = (day + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - diff);
+  return toUtcDateKey(date);
+}
+
 
 function buildStickers(userId) {
   const earned = state.earned[userId] || {};
@@ -1103,11 +1123,22 @@ function getLastLog(userId) {
   const date = dates[dates.length - 1];
   const prevDate = dates.length > 1 ? dates[dates.length - 2] : null;
   const time = new Date(logs[date].timestamp || `${date}T00:00:00`);
+  const seconds = logs[date].seconds;
+  const prevSeconds = prevDate ? logs[prevDate].seconds : null;
+  const improvedBy = prevSeconds == null ? 0 : seconds - prevSeconds;
+  const noteCount = sumNotes(userId);
+  const best = getStats(userId).best;
+  const isNewPr = seconds != null && seconds >= best && Object.keys(logs).length > 1;
   return {
     date,
     prevDate,
     hour: time.getHours(),
     day: time.getDay(),
+    seconds,
+    prevSeconds,
+    improvedBy,
+    noteCount,
+    isNewPr,
   };
 }
 
@@ -1166,7 +1197,7 @@ function openAvatarPicker(userId) {
     btn.addEventListener("click", () => {
       user.avatar = emoji;
       saveState();
-  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
+  debugLog("member: updated", { userId });
       render();
       closeAvatarPicker();
     });
