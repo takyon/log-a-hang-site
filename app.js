@@ -195,6 +195,7 @@ const toggleBadges = document.getElementById("toggle-badges");
 const copyCodeButton = document.getElementById("copy-code");
 const copyLinkButton = document.getElementById("copy-link");
 const clearDataButton = document.getElementById("clear-data");
+const unlockCodeButton = document.getElementById("unlock-code");
 const reminder = document.getElementById("reminder");
 const reminderText = document.getElementById("reminder-text");
 const reminderLog = document.getElementById("reminder-log");
@@ -248,11 +249,12 @@ function init() {
   bindEvents();
   initDebugPanel();
   debugLog("init", { users: (state.users || []).map((u) => u.name) });
-  initSync();
   if (FAMILY_PARAM) {
-    familyCodeInput.value = FAMILY_PARAM;
-    connectSync(FAMILY_PARAM);
+    familyCode = normalizeCode(FAMILY_PARAM);
+    localStorage.setItem(FAMILY_CODE_KEY, familyCode);
+    lockFamilyCode();
   }
+  initSync();
 }
 
 function ensureUserId(user) {
@@ -365,7 +367,7 @@ function bindEvents() {
     Object.assign(state, defaultData());
     seedDemoData();
     saveState();
-  debugLog("member: updated", { userId });
+    debugLog("demo: reset");
     render();
     toastMsg("Demo data reset.");
   });
@@ -385,7 +387,7 @@ function bindEvents() {
     ensureDefaultUsers();
     normalizeUsers();
     saveState();
-  debugLog("member: updated", { userId });
+    debugLog("member: added", { userId: newUser.id, name: newUser.name });
     render();
     openAvatarPicker(newUser.id);
   });
@@ -401,7 +403,7 @@ function bindEvents() {
       state.weeklyQuest = null;
       ensureWeeklyQuest(true);
       saveState();
-  debugLog("member: updated", { userId });
+      debugLog("weeklyQuest: reroll", { target: state.weeklyQuest ? state.weeklyQuest.target : 0 });
       render();
     });
   }
@@ -432,6 +434,23 @@ function bindEvents() {
     navigator.clipboard.writeText(url.toString());
     toastMsg("Share link copied.");
   });
+  if (unlockCodeButton) {
+    unlockCodeButton.addEventListener("click", () => {
+      const confirmed = confirm("Change the family code? You may lose access to the current family logs unless you keep the old code.");
+      if (!confirmed) return;
+      unlockFamilyCode();
+      localStorage.removeItem(FAMILY_CODE_KEY);
+      familyCode = "";
+      familyCodeInput.value = "";
+      if (syncChannel && supabaseClient) {
+        supabaseClient.removeChannel(syncChannel);
+        syncChannel = null;
+      }
+      setSyncStatus("Not connected");
+      updateFamilyUiState();
+      updateSyncVisibility();
+    });
+  }
   clearDataButton.addEventListener("click", () => {
     const confirmed = confirm("Clear all hang data for this device and family? This cannot be undone.");
     if (!confirmed) return;
@@ -762,7 +781,6 @@ function initSync() {
   familyCodeInput.value = familyCode;
   initSupabase();
   if (familyCode) {
-    lockFamilyCode();
     connectSync(familyCode);
   } else {
     setSyncStatus("Not connected");
@@ -1002,7 +1020,7 @@ function importData(event) {
       if (!parsed.users || !parsed.logs) throw new Error("Invalid file");
       Object.assign(state, parsed);
       saveState();
-  debugLog("member: updated", { userId });
+      debugLog("import: success", { users: state.users ? state.users.length : 0 });
       render();
       toastMsg("Data imported.");
     } catch (error) {
@@ -1312,15 +1330,17 @@ function isFamilyLocked() {
 }
 
 function updateFamilyUiState() {
-  const locked = isFamilyLocked();
+  const locked = isFamilyLocked() && Boolean(familyCode);
   if (locked) {
     newCodeButton.disabled = true;
     newCodeButton.textContent = "Code Locked";
     familyCodeInput.dataset.locked = "true";
+    if (unlockCodeButton) unlockCodeButton.classList.remove("hidden");
   } else {
     newCodeButton.disabled = false;
     newCodeButton.textContent = "New Code";
     delete familyCodeInput.dataset.locked;
+    if (unlockCodeButton) unlockCodeButton.classList.add("hidden");
   }
 }
 
@@ -1411,3 +1431,8 @@ function updateSyncVisibility() {
   syncSection.style.display = hide ? "none" : "grid";
 }
 
+
+
+function unlockFamilyCode() {
+  localStorage.removeItem(FAMILY_LOCK_KEY);
+}

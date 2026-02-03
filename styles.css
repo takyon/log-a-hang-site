@@ -646,3 +646,7 @@ button:active {
   white-space: pre-wrap;
   overflow-y: auto;
 }
+
+.sync__row--actions .hidden {
+  display: none;
+}
