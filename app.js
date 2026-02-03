@@ -220,6 +220,13 @@ const AVATAR_SET = ["🧗", "🌈", "⭐", "🐉", "🦊", "🐼", "🐸", "🦁
 
 init();
 
+function ensureDefaultUsers() {
+  if (!state.users || state.users.length === 0) {
+    state.users = defaultData().users;
+    saveState({ sync: false, mark: false });
+  }
+}
+
 function init() {
   if (!state.cleanedOnce) {
     state.logs = {};
@@ -229,6 +236,7 @@ function init() {
     cleanOnLoad = true;
     saveState({ sync: false, mark: false });
   }
+  ensureDefaultUsers();
   normalizeUsers();
   selectedUserId = state.users[0] ? state.users[0].id : null;
   dateInput.value = todayLocal();
@@ -236,6 +244,7 @@ function init() {
   render();
   bindEvents();
   initDebugPanel();
+  debugLog("init", { users: (state.users || []).map((u) => u.name) });
   initSync();
   if (FAMILY_PARAM) {
     familyCodeInput.value = FAMILY_PARAM;
@@ -367,9 +376,11 @@ function bindEvents() {
       color: randomColor(),
       avatar: "😊",
     };
-    normalizeUsers();
+    ensureDefaultUsers();
+  normalizeUsers();
     state.users.push(newUser);
-    normalizeUsers();
+    ensureDefaultUsers();
+  normalizeUsers();
     saveState();
   debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
     render();
@@ -803,7 +814,8 @@ async function syncWithRemote() {
     debugLog("syncWithRemote: applyRemote", { remoteUpdated, localUpdated });
     const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
-    normalizeUsers();
+    ensureDefaultUsers();
+  normalizeUsers();
     saveState({ sync: false, mark: false });
     render();
     setSyncStatus(`Synced from family ${familyCode}.`);
@@ -861,7 +873,8 @@ function subscribeRealtime() {
         if (remoteUpdated && remoteUpdated <= localUpdated) return;
         const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
-    normalizeUsers();
+    ensureDefaultUsers();
+  normalizeUsers();
         saveState({ sync: false, mark: false });
         render();
         toastMsg("Synced new hang from family.");
