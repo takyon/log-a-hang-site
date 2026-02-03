@@ -351,6 +351,7 @@ function loadState() {
 function saveState({ sync = true, mark = true } = {}) {
   if (mark) markUpdated();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  debugLog("saveState", { sync, mark, lastUpdated: state.lastUpdated });
   if (sync) pushState();
 }
 
@@ -829,7 +830,10 @@ async function syncWithRemote() {
 }
 
 async function pushState() {
-  if (!supabaseClient || !familyCode || isSyncing) return;
+  if (!supabaseClient || !familyCode || isSyncing) {
+    debugLog("pushState: skip", { supabaseClient: !!supabaseClient, familyCode, isSyncing });
+    return;
+  }
   ensureDefaultUsers();
   debugLog("pushState: start", { familyCode, lastUpdated: state.lastUpdated, users: state.users.length });
   isSyncing = true;
