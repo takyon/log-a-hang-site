@@ -651,7 +651,8 @@ async function syncWithRemote() {
   const localUpdated = state.lastUpdated || "";
 
   if (!localUpdated || remoteUpdated > localUpdated) {
-    Object.assign(state, remoteState);
+    const merged = mergeState(state, remoteState);
+    Object.assign(state, merged);
     saveState({ sync: false, mark: false });
     render();
     setSyncStatus(`Synced from family ${familyCode}.`);
@@ -700,7 +701,8 @@ function subscribeRealtime() {
         const remoteUpdated = remoteState.lastUpdated || "";
         const localUpdated = state.lastUpdated || "";
         if (remoteUpdated && remoteUpdated <= localUpdated) return;
-        Object.assign(state, remoteState);
+        const merged = mergeState(state, remoteState);
+    Object.assign(state, merged);
         saveState({ sync: false, mark: false });
         render();
         toastMsg("Synced new hang from family.");
@@ -995,4 +997,57 @@ function closeAvatarPicker() {
 function sumNotes(userId) {
   const logs = state.logs[userId] || {};
   return Object.values(logs).filter((log) => (log.note || "").trim().length > 0).length;
+}
+
+
+function mergeState(local, remote) {
+  const merged = { ...local, ...remote };
+  merged.users = mergeUsers(local.users || [], remote.users || []);
+  merged.logs = mergeLogs(local.logs || {}, remote.logs || {});
+  merged.earned = { ...(local.earned || {}), ...(remote.earned || {}) };
+  merged.weeklyQuest = chooseWeeklyQuest(local, remote);
+  merged.cleanedOnce = local.cleanedOnce || remote.cleanedOnce || false;
+  merged.lastUpdated = maxTimestamp(local.lastUpdated, remote.lastUpdated);
+  return merged;
+}
+
+function mergeUsers(localUsers, remoteUsers) {
+  const byId = {};
+  localUsers.forEach((u) => { byId[u.id] = u; });
+  remoteUsers.forEach((u) => { byId[u.id] = u; });
+  return Object.values(byId);
+}
+
+function mergeLogs(localLogs, remoteLogs) {
+  const merged = { ...localLogs };
+  Object.keys(remoteLogs).forEach((userId) => {
+    if (!merged[userId]) merged[userId] = {};
+    const localUserLogs = merged[userId];
+    const remoteUserLogs = remoteLogs[userId] || {};
+    Object.keys(remoteUserLogs).forEach((date) => {
+      const localEntry = localUserLogs[date];
+      const remoteEntry = remoteUserLogs[date];
+      if (!localEntry) {
+        localUserLogs[date] = remoteEntry;
+      } else {
+        const localTs = localEntry.timestamp || "";
+        const remoteTs = remoteEntry.timestamp || "";
+        localUserLogs[date] = remoteTs > localTs ? remoteEntry : localEntry;
+      }
+    });
+  });
+  return merged;
+}
+
+function chooseWeeklyQuest(local, remote) {
+  const localUpdated = local.lastUpdated || "";
+  const remoteUpdated = remote.lastUpdated || "";
+  if (remoteUpdated > localUpdated) return remote.weeklyQuest || local.weeklyQuest;
+  return local.weeklyQuest || remote.weeklyQuest;
+}
+
+function maxTimestamp(a, b) {
+  if (!a) return b || null;
+  if (!b) return a || null;
+  return a > b ? a : b;
 }
