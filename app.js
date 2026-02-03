@@ -443,7 +443,6 @@ function handleSubmit(event) {
   saveState();
   render();
   form.reset();
-  normalizeUsers();
   dateInput.value = todayLocal();
   toastMsg("Hang saved! Nice work.");
 }
