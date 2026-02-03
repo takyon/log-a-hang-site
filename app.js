@@ -1274,6 +1274,7 @@ function debugLog(label, data) {
 function initDebugPanel() {
   if (!DEBUG_ENABLED || !debugPanel) return;
   debugPanel.classList.add("show");
+  debugLog("debugPanel", { enabled: DEBUG_ENABLED, panel: !!debugPanel, dump: !!debugDump });
   if (debugCopy) {
     debugCopy.addEventListener("click", () => {
       navigator.clipboard.writeText(debugEntries.join("\n"));
@@ -1317,3 +1318,19 @@ if (DEBUG_ENABLED) {
     }
   });
 }
+
+
+window.__dumpState = function() {
+  if (!DEBUG_ENABLED) {
+    console.warn("Debug not enabled");
+    return;
+  }
+  debugLog("dump", {
+    users: state.users,
+    logs: state.logs,
+    earned: state.earned,
+    lastUpdated: state.lastUpdated,
+    familyCode,
+    selectedUserId
+  });
+};
