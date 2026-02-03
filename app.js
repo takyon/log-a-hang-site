@@ -1059,9 +1059,11 @@ function ensureWeeklyQuest(force = false) {
   ];
   const quest = quests[Math.floor(Math.random() * quests.length)];
   state.weeklyQuest = { ...quest, weekKey, progress: 0, completed: false };
+  // Persist the quest so it stays consistent across refreshes/devices.
+  saveState();
 }
 
-function updateWeeklyProgress() {
+function updateWeeklyProgress()() {
   ensureWeeklyQuest();
   const total = getWeekSeconds();
   if (!state.weeklyQuest) return;
