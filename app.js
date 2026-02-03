@@ -213,6 +213,7 @@ const familyCodeInput = document.getElementById("family-code");
 const connectSyncButton = document.getElementById("connect-sync");
 const newCodeButton = document.getElementById("new-code");
 const syncStatus = document.getElementById("sync-status");
+const syncSection = document.getElementById("sync-section");
 
 let showAllBadges = false;
 let selectedUserId = null;
@@ -448,6 +449,7 @@ function bindEvents() {
     connectSync(code);
     lockFamilyCode();
     updateFamilyUiState();
+  updateSyncVisibility();
   });
   newCodeButton.addEventListener("click", () => {
     const code = randomFamilyCode();
@@ -455,6 +457,7 @@ function bindEvents() {
     connectSync(code);
     lockFamilyCode();
     updateFamilyUiState();
+  updateSyncVisibility();
   });
 }
 
@@ -765,6 +768,7 @@ function initSync() {
     setSyncStatus("Not connected");
   }
   updateFamilyUiState();
+  updateSyncVisibility();
 }
 
 function initSupabase() {
@@ -1374,3 +1378,10 @@ window.__dumpState = function() {
     selectedUserId
   });
 };
+
+
+function updateSyncVisibility() {
+  if (!syncSection) return;
+  const hide = Boolean(FAMILY_PARAM) || (familyCode && isFamilyLocked());
+  syncSection.style.display = hide ? "none" : "grid";
+}
