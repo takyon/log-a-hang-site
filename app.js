@@ -824,6 +824,26 @@ async function syncWithRemote() {
   const remoteState = row.data;
   const remoteUpdated = remoteState.lastUpdated || row.updated_at || "";
   const localUpdated = state.lastUpdated || "";
+  const remoteHasLogs = hasAnyLogs(remoteState);
+  const localHasLogs = hasAnyLogs(state);
+
+  if (remoteHasLogs && !localHasLogs) {
+    debugLog("syncWithRemote: applyRemote", { reason: "remote_has_logs" });
+    const merged = mergeState(state, remoteState);
+    Object.assign(state, merged);
+    ensureDefaultUsers();
+    normalizeUsers();
+    saveState({ sync: false, mark: false });
+    render();
+    setSyncStatus(`Synced from family ${familyCode}.`);
+    return;
+  }
+
+  if (!remoteHasLogs && localHasLogs) {
+    debugLog("syncWithRemote: pushLocal", { reason: "local_has_logs" });
+    await pushState();
+    return;
+  }
 
   if (!localUpdated || remoteUpdated > localUpdated) {
     debugLog("syncWithRemote: applyRemote", { remoteUpdated, localUpdated });
@@ -1063,8 +1083,8 @@ function ensureWeeklyQuest(force = false) {
   ];
   const quest = quests[Math.floor(Math.random() * quests.length)];
   state.weeklyQuest = { ...quest, weekKey, progress: 0, completed: false };
-  // Persist the quest so it stays consistent across refreshes/devices.
-  saveState();
+  // Persist locally without advancing lastUpdated (prevents overwriting remote on first sync).
+  saveState({ sync: false, mark: false });
 }
 
 function updateWeeklyProgress() {
@@ -1225,6 +1245,11 @@ function sumNotes(userId) {
 }
 
 
+function hasAnyLogs(stateObj) {
+  if (!stateObj || !stateObj.logs) return false;
+  return Object.values(stateObj.logs).some((userLogs) => userLogs && Object.keys(userLogs).length > 0);
+}
+
 function mergeState(local, remote) {
   const merged = { ...local, ...remote };
   merged.users = mergeUsers(local.users || [], remote.users || []);
@@ -1382,6 +1407,7 @@ window.__dumpState = function() {
 
 function updateSyncVisibility() {
   if (!syncSection) return;
-  const hide = Boolean(FAMILY_PARAM) || (familyCode && isFamilyLocked());
+  const hide = Boolean(FAMILY_PARAM);
   syncSection.style.display = hide ? "none" : "grid";
 }
+
