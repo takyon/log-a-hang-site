@@ -696,11 +696,21 @@ function getStreakInfo(dates, today) {
 
 function updateBadges(userId) {
   const stats = getStats(userId);
+  const lastLog = getLastLog(userId);
+  const gapDays = lastLog && lastLog.prevDate ? daysBetween(lastLog.prevDate, lastLog.date) : 0;
+  const ctx = {
+    lastLog,
+    gapDays,
+    improvedBy: lastLog ? lastLog.improvedBy : 0,
+    isNewPr: lastLog ? !!lastLog.isNewPr : false,
+    noteCount: lastLog ? lastLog.noteCount : 0,
+  };
   if (!state.earned[userId]) state.earned[userId] = {};
 
   badgeList.forEach((badge) => {
     const earned = state.earned[userId][badge.id];
-    if (!earned && badge.check(stats)) {
+    const qualifies = badge.check ? badge.check(stats, ctx) : false;
+    if (!earned && qualifies) {
       state.earned[userId][badge.id] = new Date().toISOString();
       toastMsg(`${badge.title} unlocked for ${getUserName(userId)}!`);
     }
