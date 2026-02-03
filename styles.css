@@ -609,3 +609,40 @@ button:active {
   50% { transform: rotate(1.2deg) translateY(2px); }
   100% { transform: rotate(0deg) translateY(0); }
 }
+
+
+.debug-panel {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 90px;
+  width: min(420px, 92vw);
+  max-height: 50vh;
+  overflow: hidden;
+  background: #1f1b16;
+  color: #f7f2ea;
+  border-radius: 16px;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25);
+  z-index: 999;
+}
+
+.debug-panel.show {
+  display: grid;
+}
+
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+}
+
+.debug-panel pre {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}

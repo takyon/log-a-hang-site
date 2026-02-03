@@ -178,6 +178,12 @@ const noteInput = document.getElementById("note");
 const teamBoard = document.getElementById("team-board");
 const badgeGrid = document.getElementById("badge-grid");
 const toast = document.getElementById("toast");
+const debugPanel = document.getElementById("debug-panel");
+const debugLogEl = document.getElementById("debug-log");
+const debugCopy = document.getElementById("debug-copy");
+const debugClear = document.getElementById("debug-clear");
+const DEBUG_ENABLED = new URLSearchParams(window.location.search).get("debug") === "1" || localStorage.getItem("hangclub.debug") === "on";
+let debugEntries = [];
 const metricTotal = document.getElementById("metric-total");
 const metricLongest = document.getElementById("metric-longest");
 const resetDemo = document.getElementById("reset-demo");
@@ -229,6 +235,7 @@ function init() {
   ensureWeeklyQuest();
   render();
   bindEvents();
+  initDebugPanel();
   initSync();
   if (FAMILY_PARAM) {
     familyCodeInput.value = FAMILY_PARAM;
@@ -275,6 +282,7 @@ function mergeUserData(targetId, sourceId) {
     if (!t) {
       targetLogs[date] = s;
     } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
       const st = s.timestamp || "";
       const tt = t.timestamp || "";
       targetLogs[date] = st > tt ? s : t;
@@ -345,6 +353,7 @@ function bindEvents() {
     Object.assign(state, defaultData());
     seedDemoData();
     saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
     render();
     toastMsg("Demo data reset.");
   });
@@ -362,6 +371,7 @@ function bindEvents() {
     state.users.push(newUser);
     normalizeUsers();
     saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
     render();
     openAvatarPicker(newUser.id);
   });
@@ -377,6 +387,7 @@ function bindEvents() {
       state.weeklyQuest = null;
       ensureWeeklyQuest(true);
       saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
       render();
     });
   }
@@ -438,13 +449,18 @@ function bindEvents() {
 
 function handleSubmit(event) {
   event.preventDefault();
+  debugLog("submit: start", { selected: userSelect.value, selectedName: userSelect.options[userSelect.selectedIndex]?.dataset?.name || "" });
   let selectedUser = getUserBySelection();
   const seconds = parseInt(secondsInput.value, 10);
   const date = dateInput.value;
-  if (!selectedUser || !seconds || !date) return;
+  if (!selectedUser || !seconds || !date) {
+    debugLog("submit: blocked", { selectedUser: !!selectedUser, seconds, date });
+    return;
+  }
   selectedUser = ensureUserId(selectedUser);
   const userId = selectedUser.id;
   if (!state.logs[userId]) state.logs[userId] = {};
+  debugLog("submit: saving", { userId, name: selectedUser.name, date, seconds });
   state.logs[userId][date] = {
     seconds,
     note: noteInput.value.trim(),
@@ -457,6 +473,7 @@ function handleSubmit(event) {
   }
   updateWeeklyProgress();
   saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
   render();
   secondsInput.value = "";
   noteInput.value = "";
@@ -504,6 +521,7 @@ function renderUserSelect() {
   if (selectedUserId && Array.from(userSelect.options).some((o) => o.value === selectedUserId)) {
     userSelect.value = selectedUserId;
   } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     selectedUserId = userSelect.value;
   }
 
@@ -568,6 +586,7 @@ function renderBadges() {
       badgeEl.classList.add("locked");
       stamp.textContent = "Not Yet";
     } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
       stamp.textContent = `Earned (${earnedUsers.join(", ")})`;
     }
 
@@ -651,6 +670,7 @@ function getStreakInfo(dates, today) {
       if (daysBetween(sorted[i], sorted[i + 1]) === 1) {
         current += 1;
       } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
         break;
       }
     }
@@ -699,6 +719,7 @@ function editMember(userId) {
   }
   openAvatarPicker(user.id);
   saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
   render();
 }
 
@@ -719,6 +740,7 @@ function initSync() {
   if (familyCode) {
     connectSync(familyCode);
   } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     setSyncStatus("Not connected");
   }
 }
@@ -752,6 +774,7 @@ async function connectSync(code) {
 }
 
 async function syncWithRemote() {
+  debugLog("syncWithRemote: start", { familyCode });
   if (!supabaseClient || !familyCode) return;
   const { data, error } = await supabaseClient
     .from("hang_data")
@@ -759,12 +782,14 @@ async function syncWithRemote() {
     .eq("family_code", familyCode);
 
   if (error) {
+    debugLog("syncWithRemote: error", { message: error.message });
     setSyncStatus("Sync error. Check Supabase settings.");
     return;
   }
 
   const row = data && data[0];
   if (!row || !row.data) {
+    debugLog("syncWithRemote: empty", {});
     await pushState();
     setSyncStatus(`Created family ${familyCode}.`);
     return;
@@ -775,6 +800,7 @@ async function syncWithRemote() {
   const localUpdated = state.lastUpdated || "";
 
   if (!localUpdated || remoteUpdated > localUpdated) {
+    debugLog("syncWithRemote: applyRemote", { remoteUpdated, localUpdated });
     const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
     normalizeUsers();
@@ -782,14 +808,18 @@ async function syncWithRemote() {
     render();
     setSyncStatus(`Synced from family ${familyCode}.`);
   } else if (remoteUpdated < localUpdated) {
+    debugLog("syncWithRemote: pushLocal", { remoteUpdated, localUpdated });
     await pushState();
   } else {
-    setSyncStatus(`Connected to family ${familyCode}.`);
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
+    debugLog("pushState: success", { familyCode });
+  setSyncStatus(`Connected to family ${familyCode}.`);
   }
 }
 
 async function pushState() {
   if (!supabaseClient || !familyCode || isSyncing) return;
+  debugLog("pushState: start", { familyCode, lastUpdated: state.lastUpdated });
   isSyncing = true;
   if (!state.lastUpdated) markUpdated();
   const payload = { ...state };
@@ -800,9 +830,12 @@ async function pushState() {
   });
   isSyncing = false;
   if (error) {
+    debugLog("syncWithRemote: error", { message: error.message });
+    debugLog("pushState: error", { message: error.message });
     setSyncStatus("Sync failed. Check Supabase settings.");
     return;
   }
+  debugLog("pushState: success", { familyCode });
   setSyncStatus(`Connected to family ${familyCode}.`);
 }
 
@@ -918,6 +951,7 @@ function importData(event) {
       if (!parsed.users || !parsed.logs) throw new Error("Invalid file");
       Object.assign(state, parsed);
       saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
       render();
       toastMsg("Data imported.");
     } catch (error) {
@@ -1105,6 +1139,7 @@ function openAvatarPicker(userId) {
     btn.addEventListener("click", () => {
       user.avatar = emoji;
       saveState();
+  debugLog("submit: saved", { userId, totalLogs: Object.keys(state.logs[userId] || {}).length });
       render();
       closeAvatarPicker();
     });
@@ -1156,6 +1191,7 @@ function mergeLogs(localLogs, remoteLogs) {
       if (!localEntry) {
         localUserLogs[date] = remoteEntry;
       } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
         const localTs = localEntry.timestamp || "";
         const remoteTs = remoteEntry.timestamp || "";
         localUserLogs[date] = remoteTs > localTs ? remoteEntry : localEntry;
@@ -1194,8 +1230,44 @@ function updateFamilyUiState() {
     newCodeButton.textContent = "Code Locked";
     familyCodeInput.dataset.locked = "true";
   } else {
+    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     newCodeButton.disabled = false;
     newCodeButton.textContent = "New Code";
     delete familyCodeInput.dataset.locked;
+  }
+}
+
+
+function debugLog(label, data) {
+  if (!DEBUG_ENABLED || !debugLogEl || !debugPanel) return;
+  const time = new Date().toISOString().split("T")[1].replace("Z", "");
+  let payload = "";
+  try {
+    payload = data !== undefined ? JSON.stringify(data) : "";
+  } catch (e) {
+    payload = "[unserializable]";
+  }
+  const line = `[${time}] ${label}${payload ? " :: " + payload : ""}`;
+  debugEntries.push(line);
+  debugLogEl.textContent = debugEntries.slice(-200).join("
+");
+  debugPanel.classList.add("show");
+}
+
+function initDebugPanel() {
+  if (!DEBUG_ENABLED || !debugPanel) return;
+  debugPanel.classList.add("show");
+  if (debugCopy) {
+    debugCopy.addEventListener("click", () => {
+      navigator.clipboard.writeText(debugEntries.join("
+"));
+      toastMsg("Debug log copied.");
+    });
+  }
+  if (debugClear) {
+    debugClear.addEventListener("click", () => {
+      debugEntries = [];
+      debugLogEl.textContent = "";
+    });
   }
 }
