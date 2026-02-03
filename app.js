@@ -281,21 +281,29 @@ function bindEvents() {
     toggleBadges.textContent = showAllBadges ? "Show Earned" : "Show All";
     renderBadges();
   });
-  newQuestButton.addEventListener("click", () => {
-    state.weeklyQuest = null;
-    ensureWeeklyQuest(true);
-    saveState();
-    render();
-  });
-  toggleSoundButton.addEventListener("click", () => {
-    soundOn = !soundOn;
-    localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off");
-    toggleSoundButton.textContent = soundOn ? "Sound: On" : "Sound: Off";
-  });
-  reminderLog.addEventListener("click", () => {
-    secondsInput.focus();
-  });
-  avatarClose.addEventListener("click", closeAvatarPicker);
+  if (newQuestButton) {
+    newQuestButton.addEventListener("click", () => {
+      state.weeklyQuest = null;
+      ensureWeeklyQuest(true);
+      saveState();
+      render();
+    });
+  }
+  if (toggleSoundButton) {
+    toggleSoundButton.addEventListener("click", () => {
+      soundOn = !soundOn;
+      localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off");
+      toggleSoundButton.textContent = soundOn ? "Sound: On" : "Sound: Off";
+    });
+  }
+  if (reminderLog) {
+    reminderLog.addEventListener("click", () => {
+      secondsInput.focus();
+    });
+  }
+  if (avatarClose) {
+    avatarClose.addEventListener("click", closeAvatarPicker);
+  }
   copyCodeButton.addEventListener("click", () => {
     if (!familyCodeInput.value.trim()) return;
     navigator.clipboard.writeText(familyCodeInput.value.trim());
@@ -356,9 +364,15 @@ function render() {
   renderTeamBoard();
   renderBadges();
   renderMetrics();
-  renderQuest();
-  renderTeamProgress();
-  renderReminder();
+  if (questName && questDesc && questProgress && questLabel) {
+    renderQuest();
+  }
+  if (teamProgress && teamProgressLabel) {
+    renderTeamProgress();
+  }
+  if (reminder && reminderText) {
+    renderReminder();
+  }
 }
 
 function renderUserSelect() {
@@ -813,6 +827,7 @@ function clearAllData() {
 
 
 function renderQuest() {
+  if (!questName || !questDesc || !questProgress || !questLabel) return;
   ensureWeeklyQuest();
   const quest = state.weeklyQuest;
   if (!quest) return;
@@ -824,6 +839,7 @@ function renderQuest() {
 }
 
 function renderTeamProgress() {
+  if (!teamProgress || !teamProgressLabel) return;
   const total = getWeekSeconds();
   const target = state.weeklyQuest ? state.weeklyQuest.target : 0;
   const percent = target ? Math.min(100, Math.round((total / target) * 100)) : 0;
@@ -832,6 +848,7 @@ function renderTeamProgress() {
 }
 
 function renderReminder() {
+  if (!reminder || !reminderText) return;
   const today = todayLocal();
   const anyoneLogged = state.users.some((user) => (state.logs[user.id] || {})[today]);
   reminder.style.display = anyoneLogged ? "none" : "flex";
@@ -949,6 +966,7 @@ function beep(freq, duration) {
 
 
 function openAvatarPicker(userId) {
+  if (!avatarModal || !avatarGrid) return;
   const user = state.users.find((member) => member.id === userId);
   if (!user) return;
   avatarGrid.innerHTML = "";
