@@ -598,7 +598,11 @@ button:active {
   width: min(420px, 95%);
   height: auto;
   object-fit: contain;
+  border-radius: 28px;
+  background: var(--bg);
   filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.12));
+  -webkit-mask-image: radial-gradient(circle at center, #000 70%, transparent 100%);
+  mask-image: radial-gradient(circle at center, #000 70%, transparent 100%);
 }
 
 
