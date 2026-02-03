@@ -599,3 +599,15 @@ button:active {
   height: auto;
   filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.12));
 }
+
+
+.hang-sway {
+  transform-origin: 260px 60px;
+  animation: sway 3.2s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0% { transform: rotate(0deg) translateY(0); }
+  50% { transform: rotate(1.2deg) translateY(2px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
