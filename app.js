@@ -182,6 +182,7 @@ const debugPanel = document.getElementById("debug-panel");
 const debugLogEl = document.getElementById("debug-log");
 const debugCopy = document.getElementById("debug-copy");
 const debugClear = document.getElementById("debug-clear");
+const debugDump = document.getElementById("debug-dump");
 const DEBUG_ENABLED = new URLSearchParams(window.location.search).get("debug") === "1" || localStorage.getItem("hangclub.debug") === "on";
 let debugEntries = [];
 const metricTotal = document.getElementById("metric-total");
@@ -222,6 +223,7 @@ init();
 
 function ensureDefaultUsers() {
   if (!state.users || state.users.length === 0) {
+    debugLog("ensureDefaultUsers", { action: "restore" });
     state.users = defaultData().users;
     saveState({ sync: false, mark: false });
   }
@@ -493,6 +495,9 @@ function handleSubmit(event) {
 }
 
 function render() {
+  if (!state.users || state.users.length === 0) {
+    ensureDefaultUsers();
+  }
   renderUserSelect();
   updateWeeklyProgress();
   renderTeamBoard();
@@ -751,7 +756,6 @@ function initSync() {
   if (familyCode) {
     connectSync(familyCode);
   } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     setSyncStatus("Not connected");
   }
 }
@@ -1278,10 +1282,40 @@ function initDebugPanel() {
       toastMsg("Debug log copied.");
     });
   }
+  if (debugDump) {
+    debugDump.addEventListener("click", () => {
+      debugLog("dump", {
+        users: state.users,
+        logs: state.logs,
+        earned: state.earned,
+        lastUpdated: state.lastUpdated,
+        familyCode,
+        selectedUserId
+      });
+    });
+  }
   if (debugClear) {
     debugClear.addEventListener("click", () => {
       debugEntries = [];
       debugLogEl.textContent = "";
     });
   }
+}
+
+
+if (DEBUG_ENABLED) {
+  window.addEventListener("error", (event) => {
+    try {
+      debugLog("window.error", { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno });
+    } catch (e) {
+      // ignore
+    }
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    try {
+      debugLog("unhandledrejection", { reason: String(event.reason) });
+    } catch (e) {
+      // ignore
+    }
+  });
 }
