@@ -1267,8 +1267,7 @@ function debugLog(label, data) {
   }
   const line = `[${time}] ${label}${payload ? " :: " + payload : ""}`;
   debugEntries.push(line);
-  debugLogEl.textContent = debugEntries.slice(-200).join("
-");
+  debugLogEl.textContent = debugEntries.slice(-200).join("\n");
   debugPanel.classList.add("show");
 }
 
@@ -1277,8 +1276,7 @@ function initDebugPanel() {
   debugPanel.classList.add("show");
   if (debugCopy) {
     debugCopy.addEventListener("click", () => {
-      navigator.clipboard.writeText(debugEntries.join("
-"));
+      navigator.clipboard.writeText(debugEntries.join("\n"));
       toastMsg("Debug log copied.");
     });
   }
