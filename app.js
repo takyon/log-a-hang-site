@@ -458,7 +458,8 @@ function handleSubmit(event) {
   updateWeeklyProgress();
   saveState();
   render();
-  form.reset();
+  secondsInput.value = "";
+  noteInput.value = "";
   dateInput.value = todayLocal();
   toastMsg("Hang saved! Nice work.");
 }
