@@ -234,6 +234,16 @@ function init() {
   }
 }
 
+function ensureUserId(user) {
+  if (!user) return null;
+  const canonicalId = slugifyName(user.name) || user.id;
+  if (canonicalId && canonicalId !== user.id) {
+    mergeUserData(canonicalId, user.id);
+    user.id = canonicalId;
+  }
+  return user;
+}
+
 function slugifyName(name) {
   return name
     .trim()
@@ -423,10 +433,11 @@ function bindEvents() {
 
 function handleSubmit(event) {
   event.preventDefault();
-  const selectedUser = getUserBySelection();
+  let selectedUser = getUserBySelection();
   const seconds = parseInt(secondsInput.value, 10);
   const date = dateInput.value;
   if (!selectedUser || !seconds || !date) return;
+  selectedUser = ensureUserId(selectedUser);
   const userId = selectedUser.id;
   if (!state.logs[userId]) state.logs[userId] = {};
   state.logs[userId][date] = {
@@ -468,11 +479,11 @@ function getUserBySelection() {
   const selectedOption = userSelect.options[userSelect.selectedIndex];
   const selectedName = selectedOption ? selectedOption.dataset.name : "";
   const selectedId = userSelect.value;
-  return (
+  const found =
     state.users.find((u) => u.id === selectedId) ||
     state.users.find((u) => u.name === selectedName) ||
-    null
-  );
+    null;
+  return ensureUserId(found);
 }
 
 function renderUserSelect() {
