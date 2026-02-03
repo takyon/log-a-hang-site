@@ -831,7 +831,8 @@ async function syncWithRemote() {
 
 async function pushState() {
   if (!supabaseClient || !familyCode || isSyncing) return;
-  debugLog("pushState: start", { familyCode, lastUpdated: state.lastUpdated });
+  ensureDefaultUsers();
+  debugLog("pushState: start", { familyCode, lastUpdated: state.lastUpdated, users: state.users.length });
   isSyncing = true;
   if (!state.lastUpdated) markUpdated();
   const payload = { ...state };
