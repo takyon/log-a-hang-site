@@ -208,6 +208,7 @@ const newCodeButton = document.getElementById("new-code");
 const syncStatus = document.getElementById("sync-status");
 
 let showAllBadges = false;
+let selectedUserId = null;
 const FAMILY_PARAM = new URLSearchParams(window.location.search).get("family");
 const AVATAR_SET = ["🧗", "🌈", "⭐", "🐉", "🦊", "🐼", "🐸", "🦁", "🐯", "🦄", "🐙", "🪐", "🍀", "🎈", "🎉", "🏄", "🏹", "🧠", "🧸", "🐬", "🦋", "🐢", "🦖", "🦉"];
 
@@ -223,6 +224,7 @@ function init() {
     saveState({ sync: false, mark: false });
   }
   normalizeUsers();
+  selectedUserId = state.users[0] ? state.users[0].id : null;
   dateInput.value = todayLocal();
   ensureWeeklyQuest();
   render();
@@ -336,6 +338,9 @@ function saveState({ sync = true, mark = true } = {}) {
 
 function bindEvents() {
   form.addEventListener("submit", handleSubmit);
+  userSelect.addEventListener("change", () => {
+    selectedUserId = userSelect.value;
+  });
   resetDemo.addEventListener("click", () => {
     Object.assign(state, defaultData());
     seedDemoData();
@@ -478,7 +483,7 @@ function render() {
 function getUserBySelection() {
   const selectedOption = userSelect.options[userSelect.selectedIndex];
   const selectedName = selectedOption ? selectedOption.dataset.name : "";
-  const selectedId = userSelect.value;
+  const selectedId = selectedUserId || userSelect.value;
   const found =
     state.users.find((u) => u.id === selectedId) ||
     state.users.find((u) => u.name === selectedName) ||
@@ -495,6 +500,12 @@ function renderUserSelect() {
     option.dataset.name = user.name;
     userSelect.appendChild(option);
   });
+  if (selectedUserId && Array.from(userSelect.options).some((o) => o.value === selectedUserId)) {
+    userSelect.value = selectedUserId;
+  } else {
+    selectedUserId = userSelect.value;
+  }
+
 }
 
 function renderTeamBoard() {
