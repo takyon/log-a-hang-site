@@ -1067,7 +1067,7 @@ function ensureWeeklyQuest(force = false) {
   saveState();
 }
 
-function updateWeeklyProgress()() {
+function updateWeeklyProgress() {
   ensureWeeklyQuest();
   const total = getWeekSeconds();
   if (!state.weeklyQuest) return;
