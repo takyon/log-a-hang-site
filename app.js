@@ -293,7 +293,6 @@ function mergeUserData(targetId, sourceId) {
     if (!t) {
       targetLogs[date] = s;
     } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
       const st = s.timestamp || "";
       const tt = t.timestamp || "";
       targetLogs[date] = st > tt ? s : t;
@@ -537,7 +536,6 @@ function renderUserSelect() {
   if (selectedUserId && Array.from(userSelect.options).some((o) => o.value === selectedUserId)) {
     userSelect.value = selectedUserId;
   } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     selectedUserId = userSelect.value;
   }
 
@@ -602,7 +600,6 @@ function renderBadges() {
       badgeEl.classList.add("locked");
       stamp.textContent = "Not Yet";
     } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
       stamp.textContent = `Earned (${earnedUsers.join(", ")})`;
     }
 
@@ -686,7 +683,6 @@ function getStreakInfo(dates, today) {
       if (daysBetween(sorted[i], sorted[i + 1]) === 1) {
         current += 1;
       } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
         break;
       }
     }
@@ -827,7 +823,6 @@ async function syncWithRemote() {
     debugLog("syncWithRemote: pushLocal", { remoteUpdated, localUpdated });
     await pushState();
   } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     debugLog("pushState: success", { familyCode });
   setSyncStatus(`Connected to family ${familyCode}.`);
   }
@@ -1209,7 +1204,6 @@ function mergeLogs(localLogs, remoteLogs) {
       if (!localEntry) {
         localUserLogs[date] = remoteEntry;
       } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
         const localTs = localEntry.timestamp || "";
         const remoteTs = remoteEntry.timestamp || "";
         localUserLogs[date] = remoteTs > localTs ? remoteEntry : localEntry;
@@ -1248,7 +1242,6 @@ function updateFamilyUiState() {
     newCodeButton.textContent = "Code Locked";
     familyCodeInput.dataset.locked = "true";
   } else {
-    debugLog("syncWithRemote: inSync", { remoteUpdated, localUpdated });
     newCodeButton.disabled = false;
     newCodeButton.textContent = "New Code";
     delete familyCodeInput.dataset.locked;
