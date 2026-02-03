@@ -1,5 +1,6 @@
 const STORAGE_KEY = "hangclub.v1";
 const FAMILY_CODE_KEY = "hangclub.familyCode";
+const FAMILY_LOCK_KEY = "hangclub.familyLock";
 const SOUND_KEY = "hangclub.sound";
 
 const SUPABASE_URL = "https://ipadjstmrjdmsbnhfsqy.supabase.co";
@@ -396,24 +397,37 @@ function bindEvents() {
     if (!confirmed) return;
     clearAllData();
   });
+  familyCodeInput.addEventListener("input", () => {
+    if (isFamilyLocked()) {
+      toastMsg("Family code is locked. Use the existing code.");
+      familyCodeInput.value = familyCode;
+    }
+  });
   connectSyncButton.addEventListener("click", () => {
     const code = familyCodeInput.value.trim();
     if (!code) return;
     connectSync(code);
+    lockFamilyCode();
+    updateFamilyUiState();
   });
   newCodeButton.addEventListener("click", () => {
     const code = randomFamilyCode();
     familyCodeInput.value = code;
     connectSync(code);
+    lockFamilyCode();
+    updateFamilyUiState();
+    lockFamilyCode();
+    updateFamilyUiState();
   });
 }
 
 function handleSubmit(event) {
   event.preventDefault();
-  const userId = userSelect.value;
+  const selectedUser = getUserBySelection();
   const seconds = parseInt(secondsInput.value, 10);
   const date = dateInput.value;
-  if (!userId || !seconds || !date) return;
+  if (!selectedUser || !seconds || !date) return;
+  const userId = selectedUser.id;
   if (!state.logs[userId]) state.logs[userId] = {};
   state.logs[userId][date] = {
     seconds,
@@ -451,12 +465,24 @@ function render() {
   }
 }
 
+function getUserBySelection() {
+  const selectedOption = userSelect.options[userSelect.selectedIndex];
+  const selectedName = selectedOption ? selectedOption.dataset.name : "";
+  const selectedId = userSelect.value;
+  return (
+    state.users.find((u) => u.id === selectedId) ||
+    state.users.find((u) => u.name === selectedName) ||
+    null
+  );
+}
+
 function renderUserSelect() {
   userSelect.innerHTML = "";
   state.users.forEach((user) => {
     const option = document.createElement("option");
     option.value = user.id;
     option.textContent = user.name;
+    option.dataset.name = user.name;
     userSelect.appendChild(option);
   });
 }
@@ -1128,4 +1154,26 @@ function maxTimestamp(a, b) {
   if (!a) return b || null;
   if (!b) return a || null;
   return a > b ? a : b;
+}
+
+
+function lockFamilyCode() {
+  localStorage.setItem(FAMILY_LOCK_KEY, "locked");
+}
+
+function isFamilyLocked() {
+  return localStorage.getItem(FAMILY_LOCK_KEY) === "locked";
+}
+
+function updateFamilyUiState() {
+  const locked = isFamilyLocked();
+  if (locked) {
+    newCodeButton.disabled = true;
+    newCodeButton.textContent = "Code Locked";
+    familyCodeInput.dataset.locked = "true";
+  } else {
+    newCodeButton.disabled = false;
+    newCodeButton.textContent = "New Code";
+    delete familyCodeInput.dataset.locked;
+  }
 }
