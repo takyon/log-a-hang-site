@@ -253,6 +253,8 @@ function init() {
     familyCode = normalizeCode(FAMILY_PARAM);
     localStorage.setItem(FAMILY_CODE_KEY, familyCode);
     lockFamilyCode();
+  } else {
+    unlockFamilyCode();
   }
   initSync();
 }
@@ -1330,17 +1332,23 @@ function isFamilyLocked() {
 }
 
 function updateFamilyUiState() {
-  const locked = isFamilyLocked() && Boolean(familyCode);
+  const hasCode = Boolean(familyCode);
+  const locked = isFamilyLocked() && hasCode;
   if (locked) {
-    newCodeButton.disabled = true;
-    newCodeButton.textContent = "Code Locked";
     familyCodeInput.dataset.locked = "true";
-    if (unlockCodeButton) unlockCodeButton.classList.remove("hidden");
   } else {
-    newCodeButton.disabled = false;
-    newCodeButton.textContent = "New Code";
     delete familyCodeInput.dataset.locked;
-    if (unlockCodeButton) unlockCodeButton.classList.add("hidden");
+  }
+  if (newCodeButton) {
+    newCodeButton.disabled = hasCode;
+    newCodeButton.textContent = locked ? "Code Locked" : "New Code";
+  }
+  if (unlockCodeButton) {
+    if (hasCode) {
+      unlockCodeButton.classList.remove("hidden");
+    } else {
+      unlockCodeButton.classList.add("hidden");
+    }
   }
 }
 
