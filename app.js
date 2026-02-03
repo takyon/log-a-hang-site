@@ -144,17 +144,17 @@ const badgeList = [
 const defaultData = () => ({
   users: [
     {
-      id: crypto.randomUUID(),
+      id: "tushar",
       name: "Tushar",
       color: "#f06449",
     },
     {
-      id: crypto.randomUUID(),
+      id: "navya",
       name: "Navya",
       color: "#2d6a4f",
     },
     {
-      id: crypto.randomUUID(),
+      id: "aarna",
       name: "Aarna",
       color: "#f9c74f",
     },
@@ -221,6 +221,7 @@ function init() {
     cleanOnLoad = true;
     saveState({ sync: false, mark: false });
   }
+  normalizeUsers();
   dateInput.value = todayLocal();
   ensureWeeklyQuest();
   render();
@@ -230,6 +231,77 @@ function init() {
     familyCodeInput.value = FAMILY_PARAM;
     connectSync(FAMILY_PARAM);
   }
+}
+
+function slugifyName(name) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function ensureUniqueId(base, existing) {
+  if (!existing.has(base)) return base;
+  let i = 2;
+  let candidate = `${base}-${i}`;
+  while (existing.has(candidate)) {
+    i += 1;
+    candidate = `${base}-${i}`;
+  }
+  return candidate;
+}
+
+function mergeUserData(targetId, sourceId) {
+  if (!sourceId || targetId === sourceId) return;
+  const sourceLogs = state.logs[sourceId] || {};
+  const targetLogs = state.logs[targetId] || {};
+  Object.keys(sourceLogs).forEach((date) => {
+    const s = sourceLogs[date];
+    const t = targetLogs[date];
+    if (!t) {
+      targetLogs[date] = s;
+    } else {
+      const st = s.timestamp || "";
+      const tt = t.timestamp || "";
+      targetLogs[date] = st > tt ? s : t;
+    }
+  });
+  state.logs[targetId] = targetLogs;
+  delete state.logs[sourceId];
+
+  const sourceEarned = state.earned[sourceId] || {};
+  const targetEarned = state.earned[targetId] || {};
+  state.earned[targetId] = { ...targetEarned, ...sourceEarned };
+  delete state.earned[sourceId];
+}
+
+function normalizeUsers() {
+  const seenIds = new Set();
+  const byName = new Map();
+  const normalized = [];
+
+  state.users.forEach((user) => {
+    const nameKey = user.name.trim().toLowerCase();
+    const existing = byName.get(nameKey);
+    if (existing) {
+      mergeUserData(existing.id, user.id);
+      return;
+    }
+
+    let baseId = slugifyName(user.name);
+    if (!baseId) baseId = user.id || crypto.randomUUID();
+    const newId = ensureUniqueId(baseId, seenIds);
+    if (newId != user.id) {
+      mergeUserData(newId, user.id);
+      user.id = newId;
+    }
+    seenIds.add(newId);
+    byName.set(nameKey, user);
+    normalized.push(user);
+  });
+
+  state.users = normalized;
 }
 
 function loadState() {
@@ -263,13 +335,16 @@ function bindEvents() {
   addUser.addEventListener("click", () => {
     const name = prompt("New member name?");
     if (!name) return;
+    const baseId = slugifyName(name);
     const newUser = {
-      id: crypto.randomUUID(),
+      id: baseId || crypto.randomUUID(),
       name: name.trim().slice(0, 20),
       color: randomColor(),
       avatar: "😊",
     };
+    normalizeUsers();
     state.users.push(newUser);
+    normalizeUsers();
     saveState();
     render();
     openAvatarPicker(newUser.id);
@@ -354,6 +429,7 @@ function handleSubmit(event) {
   saveState();
   render();
   form.reset();
+  normalizeUsers();
   dateInput.value = todayLocal();
   toastMsg("Hang saved! Nice work.");
 }
@@ -653,6 +729,7 @@ async function syncWithRemote() {
   if (!localUpdated || remoteUpdated > localUpdated) {
     const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
+    normalizeUsers();
     saveState({ sync: false, mark: false });
     render();
     setSyncStatus(`Synced from family ${familyCode}.`);
@@ -703,6 +780,7 @@ function subscribeRealtime() {
         if (remoteUpdated && remoteUpdated <= localUpdated) return;
         const merged = mergeState(state, remoteState);
     Object.assign(state, merged);
+    normalizeUsers();
         saveState({ sync: false, mark: false });
         render();
         toastMsg("Synced new hang from family.");
