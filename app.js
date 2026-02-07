@@ -254,6 +254,8 @@ function init() {
     localStorage.setItem(FAMILY_CODE_KEY, familyCode);
     lockFamilyCode();
   } else {
+    familyCode = "";
+    localStorage.removeItem(FAMILY_CODE_KEY);
     unlockFamilyCode();
   }
   initSync();
@@ -1019,7 +1021,14 @@ function importData(event) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!parsed.users || !parsed.logs) throw new Error("Invalid file");
+      if (
+        !Array.isArray(parsed.users) ||
+        !parsed.logs ||
+        typeof parsed.logs !== "object" ||
+        Array.isArray(parsed.logs)
+      ) {
+        throw new Error("Invalid file");
+      }
       Object.assign(state, parsed);
       saveState();
       debugLog("import: success", { users: state.users ? state.users.length : 0 });
